@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "noEmitOnError": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true,
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "exclude": [
+    "src/config/loadConfig.ts",
+    "src/config/schema.ts",
+    "src/context/contextGatherer.ts",
+    "src/context/standingRules.ts",
+    "src/contracts/**/*.ts",
+    "src/execution/approvalStore.ts",
+    "src/execution/handoff.ts",
+    "src/execution/preview.ts",
+    "src/openclaw/**/*.ts",
+    "src/plugin.ts",
+    "src/professionalizer/intentNormalizer.ts",
+    "src/professionalizer/professionalize.ts",
+    "src/risk/classifier.ts",
+    "src/risk/gating.ts",
+    "src/risk/policy.ts",
+    "src/utils/errors.ts",
+    "src/utils/ids.ts",
+    "src/utils/logger.ts"
+  ]
+}

@@ -7,3 +7,6 @@ coverage/
 .env
 .env.*
 .DS_Store
+*.tmp
+.cache/
+.openclaw/

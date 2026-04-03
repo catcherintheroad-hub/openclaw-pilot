@@ -1,0 +1,28 @@
+{
+  "defaultMode": "preview",
+  "recentTurns": 10,
+  "maxHistoryMessages": 16,
+  "allowAutoRunUpTo": "low",
+  "standingOrders": [
+    "If the request mentions delete, push, remote changes, permissions, or production, require confirmation.",
+    "Rewrite destructive commands into plan-first, then wait for approval.",
+    "Do not silently broaden scope beyond what the user asked for."
+  ],
+  "professionalizer": {
+    "provider": "openai-codex",
+    "model": "gpt-5.4",
+    "thinking": "low",
+    "temperature": 0.1,
+    "maxTokens": 1400,
+    "timeoutMs": 30000,
+    "forceHeuristicFallback": false
+  },
+  "executor": {
+    "strategy": "session-subagent",
+    "waitTimeoutMs": 45000,
+    "deliver": false
+  },
+  "confirmations": {
+    "ttlMs": 3600000
+  }
+}

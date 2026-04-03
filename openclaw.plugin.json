@@ -1,0 +1,101 @@
+{
+  "id": "command-pilot",
+  "name": "Command Pilot",
+  "description": "Professionalize user commands into structured execution briefs with risk gating and OpenClaw execution handoff.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "workspacePath": {
+        "type": "string",
+        "description": "Default workspace path used for file-backed context and execution."
+      },
+      "standingOrders": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxCharsPerFile": {
+            "type": "number"
+          }
+        }
+      },
+      "professionalizer": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "authProfileId": {
+            "type": "string"
+          },
+          "timeoutMs": {
+            "type": "number"
+          },
+          "maxTokens": {
+            "type": "number"
+          }
+        }
+      },
+      "execution": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "embedded-agent"
+            ]
+          },
+          "timeoutMs": {
+            "type": "number"
+          },
+          "autoRunRiskLevels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium-low",
+                "medium",
+                "medium-high",
+                "high"
+              ]
+            }
+          }
+        }
+      },
+      "riskPolicyPath": {
+        "type": "string",
+        "description": "Optional path to a custom risk policy JSON file."
+      },
+      "context": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "historyTurns": {
+            "type": "number"
+          },
+          "maxMessages": {
+            "type": "number"
+          },
+          "cacheFileLimit": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

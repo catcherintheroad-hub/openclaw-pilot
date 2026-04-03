@@ -1,0 +1,248 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CommandPilotProfessionalizationResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "original_input",
+    "normalized_intent",
+    "goal",
+    "project_goal",
+    "core_thesis",
+    "pilot_id",
+    "current_stage_id",
+    "current_stage_name",
+    "current_stage_objective",
+    "why_this_stage_now",
+    "scope",
+    "constraints",
+    "deliverables",
+    "execution_mode",
+    "run_mode",
+    "risk_level",
+    "need_confirmation",
+    "success_criteria",
+    "key_risks",
+    "generated_command",
+    "generated_command_preview",
+    "feedback_contract",
+    "next_command",
+    "optimized_instruction",
+    "context_used_summary",
+    "task_objective",
+    "task_translation",
+    "in_scope",
+    "out_of_scope",
+    "target_files_or_areas",
+    "execution_plan",
+    "validation_checks",
+    "workspace_hygiene",
+    "stop_conditions",
+    "expected_deliverables",
+    "executor_prompt",
+    "executor_prompt_preview",
+    "schema_validation_ok"
+  ],
+  "properties": {
+    "original_input": {
+      "type": "string"
+    },
+    "normalized_intent": {
+      "type": "string"
+    },
+    "goal": {
+      "type": "string"
+    },
+    "project_goal": {
+      "type": "string"
+    },
+    "core_thesis": {
+      "type": "string"
+    },
+    "pilot_id": {
+      "type": "string"
+    },
+    "current_stage_id": {
+      "type": "string"
+    },
+    "current_stage_name": {
+      "type": "string"
+    },
+    "current_stage_objective": {
+      "type": "string"
+    },
+    "why_this_stage_now": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "deliverables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_mode": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "preview",
+        "run"
+      ]
+    },
+    "run_mode": {
+      "type": "string",
+      "enum": [
+        "plan_only",
+        "auto_run"
+      ]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": [
+        "low",
+        "medium-low",
+        "medium",
+        "medium-high",
+        "high"
+      ]
+    },
+    "need_confirmation": {
+      "type": "boolean"
+    },
+    "success_criteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "key_risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "feedback_contract": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "generated_command": {
+      "type": "string"
+    },
+    "generated_command_preview": {
+      "type": "string"
+    },
+    "next_command": {
+      "type": "string"
+    },
+    "optimized_instruction": {
+      "type": "string"
+    },
+    "context_used_summary": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "task_objective": {
+      "type": "string"
+    },
+    "task_translation": {
+      "type": "string"
+    },
+    "in_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "target_files_or_areas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "execution_plan": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "validation_checks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "workspace_hygiene": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stop_conditions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "expected_deliverables": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "executor_prompt": {
+      "type": "string"
+    },
+    "executor_prompt_preview": {
+      "type": "string"
+    },
+    "schema_validation_ok": {
+      "type": "boolean"
+    },
+    "fallback_reason": {
+      "type": "string"
+    },
+    "channel_strategy": {
+      "type": "string"
+    },
+    "suggested_plan": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "risk_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "output_language": {
+      "type": "string",
+      "enum": [
+        "zh-CN",
+        "en"
+      ]
+    }
+  }
+}

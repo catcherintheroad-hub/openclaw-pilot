@@ -1,0 +1,49 @@
+{
+  "blockedSilentPatterns": [
+    {
+      "id": "delete-files",
+      "match": "(rm\\s+-rf|delete|删除|清理|清除|cleanup|wipe|purge)",
+      "riskLevel": "medium-high",
+      "action": "inventory-first",
+      "reason": "Destructive cleanup must be converted into inventory and confirmation first."
+    },
+    {
+      "id": "git-push-main",
+      "match": "(git\\s+push|推到远程主分支|推送到远程主分支|推到主分支|force\\s+push|push到main|push到master)",
+      "riskLevel": "high",
+      "action": "confirm",
+      "reason": "Remote git mutation must require explicit confirmation."
+    },
+    {
+      "id": "prod-change",
+      "match": "(生产|prod|production|线上|deploy|发布)",
+      "riskLevel": "high",
+      "action": "confirm",
+      "reason": "Production-impacting actions are high risk."
+    },
+    {
+      "id": "permission-escalation",
+      "match": "(sudo|权限提升|提权|admin mode)",
+      "riskLevel": "high",
+      "action": "confirm",
+      "reason": "Privilege escalation requires operator confirmation."
+    }
+  ],
+  "destructiveHints": [
+    "delete",
+    "remove",
+    "cleanup",
+    "purge",
+    "rm",
+    "wipe",
+    "truncate",
+    "overwrite",
+    "drop table",
+    "force push",
+    "deploy"
+  ],
+  "defaultAutoRunRiskLevels": [
+    "low",
+    "medium-low"
+  ]
+}

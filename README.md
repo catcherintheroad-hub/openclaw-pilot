@@ -2,159 +2,124 @@
 
 **OpenClaw Pilot — 把模糊想法编译成可执行的 AI 工作指令。**
 
-OpenClaw Pilot is a source-first OpenClaw plugin that turns vague goals into structured, executable work instructions.
+OpenClaw Pilot 是一个面向 OpenClaw 的源码优先插件。它把用户的模糊目标编译成两段式交付：
 
-Instead of asking users to handcraft long, brittle prompts, Pilot compiles a rough objective into:
+1. 给人看的规划蓝图
+2. 可直接发送给 OpenClaw 的执行指令包
 
-1. a human-readable planning message, and
-2. a separate machine-ready execution packet that can be sent to OpenClaw.
+这让 `/pilot` 更像一个“任务编译器”，而不是单纯的提示词润色器。
 
-## Why this exists
+## 这是什么
 
-Many OpenClaw users do not fail because the model is weak. They fail because the task is underspecified.
+很多任务失败，不是模型不行，而是输入太模糊、范围太散、阶段不清。
 
-A typical input looks like this:
+OpenClaw Pilot 的作用，是把模糊输入编译成：
 
-> “I want an MVP for AI document checking for cross-border e-commerce sellers. Keep it small.”
+- 收敛后的阶段目标
+- 明确的范围内 / 范围外
+- 可继续推进的 `pilot_id`
+- 一份机器可执行的执行包
 
-That is enough for a human collaborator, but not enough for a reliable agent run.
+## 核心能力
 
-OpenClaw Pilot bridges that gap by turning fuzzy intent into:
+- **`/pilot`：新任务编译**
+- **`/pilot next <pilot_id>`：同项目续跑**
+- **两条消息交付**
+- **中文默认输出支持**
+- **风险分级与执行前收敛**
+- **structured professionalizer 稳定性增强**
 
-- a scoped plan,
-- a stage-aware continuation flow,
-- a reusable `pilot_id`, and
-- a ready-to-send execution packet.
+## `/pilot` 和 `/pilot next` 是干什么的
 
-## Core capabilities
+### `/pilot`
+用于开始一个新方向，输出阶段蓝图与执行包。
 
-- **`/pilot` for new work**  
-  Compiles a new idea into a structured stage plan.
-- **`/pilot next <pilot_id>` for continuation**  
-  Continues the same project without opening a new direction.
-- **Two-message delivery**  
-  Message 1: human-facing A/C/D output.  
-  Message 2: pure OpenClaw execution packet for copy/paste.
-- **Chinese-first locale following**  
-  Chinese input defaults to Chinese output, including labels and packet text.
-- **Professionalizer stability hardening**  
-  Structured output repair, bounded syntax recovery, fallback classification, and runtime observability.
-- **Runtime hygiene**  
-  Runtime fingerprinting, stale-listener detection, and debug-gated locale tracing.
+### `/pilot next <pilot_id>`
+用于在同一个项目上继续推进下一阶段，不重新开题。
 
-## Example
+## 两条消息交付是什么
 
-### Input
+### 第一条
+给人看，负责说明当前阶段、范围、约束和下一步。
 
-```text
-/pilot 我想做一个针对跨境电商卖家的 AI 单证核对 MVP，只覆盖合同、发票、装箱单三类文档的自动比对。先不要执行，先给我一个最小可行版本的规划。
-```
+### 第二条
+给 OpenClaw 执行，使用：
 
-### Output behavior
-
-**Message 1**
-- A. Command Pilot 蓝图
-- C. 应回传给 /pilot 的内容
-- D. 下一条命令
-
-**Message 2**
 - `[OPENCLAW_EXECUTION_PACKET v1]`
-- machine-ready packet body
+- `...`
 - `[END_OPENCLAW_EXECUTION_PACKET]`
 
-## What Pilot is not
+## 仓库现状
 
-OpenClaw Pilot is **not**:
+本仓库已经包含**真实可运行源码**、配置、测试与最小文档，不再只是 README 骨架。
 
-- a generic prompt beautifier,
-- a one-shot template library,
-- a workflow engine for every use case,
-- or a replacement for implementation work.
+当前公开版重点包括：
 
-It is a **planner/compiler layer** that helps users hand off work to OpenClaw in a more structured and repeatable way.
+- `/pilot` 新任务编译流程
+- `/pilot next` 续跑流程
+- 两条消息交付
+- 中文默认输出支持
+- 风险分级与执行前收敛
+- professionalizer 恢复与降级路径
 
-## Repository status
-
-This repository is being prepared for public release from an actively developed local plugin codebase.
-
-Current release goals:
-
-- stable `/pilot` new-task flow,
-- stable `/pilot next` continuation flow,
-- two-message delivery,
-- Chinese locale support,
-- professionalizer recovery and observability,
-- and GitHub-ready documentation.
-
-## How it works
-
-At a high level, Pilot does four things:
-
-1. **Interpret** the user’s intent.
-2. **Professionalize** it into a structured internal representation.
-3. **Persist** stage-aware state using a `pilot_id`.
-4. **Render** both a human-readable planning response and a machine-ready execution packet.
-
-## Suggested repo structure
+## 仓库结构
 
 ```text
 openclaw-pilot/
 ├─ src/
-├─ config/
 ├─ test/
+├─ tests/
+├─ config/
 ├─ docs/
 ├─ examples/
-└─ .github/
+├─ scripts/
+├─ package.json
+├─ tsconfig.json
+├─ vitest.config.ts
+└─ openclaw.plugin.json
 ```
 
-## Installation
+## 安装
 
-This project currently assumes a **source-first local plugin workflow**.
-
-If you are already running the plugin locally, keep using your current OpenClaw plugin registration workflow and point the plugin entry to the repository’s `src/index.ts`.
-
-Suggested local development flow:
+### 开发环境
 
 ```bash
 pnpm install
 pnpm typecheck
-pnpm test -- --runInBand
+pnpm test
 ```
 
-## Development notes
+### 本地插件安装
 
-- Keep host integration changes minimal.
-- Prefer backwards-compatible reply contracts.
-- Treat runtime hygiene and observability as product requirements, not just debugging conveniences.
-- Do not expand prompt repair logic into unrestricted free-form mutation.
+```bash
+openclaw plugins install -l .
+openclaw gateway restart
+```
 
-## Launch checklist
+## 基本安装/开发命令
 
-See:
+```bash
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-- [`docs/LAUNCH_CHECKLIST.md`](docs/LAUNCH_CHECKLIST.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`ROADMAP.md`](ROADMAP.md)
-- [`PUBLISH_TO_GITHUB.md`](PUBLISH_TO_GITHUB.md)
+## 测试命令
 
-## FAQ
+```bash
+pnpm typecheck
+pnpm test
+```
 
-### Why not just write better prompts manually?
+## 文档
 
-Because most users do not want to manually maintain long, structured, stage-aware prompts for every task.
+- [架构说明](docs/ARCHITECTURE.md)
+- [发布清单](docs/LAUNCH_CHECKLIST.md)
+- [产品定位](docs/PRODUCT_POSITIONING.md)
+- [配置说明](docs/configuration.md)
+- [安装说明](docs/installation.md)
 
-### Why split the output into two messages?
+## 许可证
 
-Because humans want readable guidance, while agents want a clean execution packet.
-
-### Is this only for OpenClaw?
-
-The current implementation is built for OpenClaw. The underlying idea is more general: compile vague intent into executable agent work instructions.
-
-## Contributing
-
-See [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-## License
-
-MIT — see [`LICENSE`](LICENSE).
+MIT，见 [LICENSE](LICENSE)。

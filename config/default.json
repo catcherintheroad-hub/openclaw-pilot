@@ -1,0 +1,26 @@
+{
+  "defaultMode": "preview",
+  "recentTurns": 8,
+  "maxHistoryMessages": 12,
+  "allowAutoRunUpTo": "low",
+  "standingOrders": [
+    "Keep scope explicit and do not silently expand into unrelated systems.",
+    "If a request implies deletion, remote mutation, or production impact, convert it into audit-first execution.",
+    "Preserve existing user constraints verbatim in the optimized instruction."
+  ],
+  "professionalizer": {
+    "thinking": "low",
+    "temperature": 0.2,
+    "maxTokens": 1200,
+    "timeoutMs": 30000,
+    "forceHeuristicFallback": false
+  },
+  "executor": {
+    "strategy": "session-subagent",
+    "waitTimeoutMs": 45000,
+    "deliver": false
+  },
+  "confirmations": {
+    "ttlMs": 3600000
+  }
+}

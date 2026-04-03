@@ -1,0 +1,111 @@
+{
+  "version": "1",
+  "defaultUnknownAction": "confirm",
+  "rules": [
+    {
+      "id": "destructive-delete",
+      "description": "Deletion, recursive cleanup, and file removal must be confirmed.",
+      "riskLevel": "high",
+      "defaultAction": "confirm",
+      "keywords": [
+        "delete",
+        "remove",
+        "rm -rf",
+        "cleanup",
+        "clean up",
+        "purge",
+        "trash",
+        "wipe"
+      ]
+    },
+    {
+      "id": "git-remote-write",
+      "description": "Remote git writes and branch publication must be confirmed.",
+      "riskLevel": "critical",
+      "defaultAction": "confirm",
+      "keywords": [
+        "git push",
+        "force push",
+        "push to main",
+        "push to master",
+        "publish branch",
+        "rewrite history"
+      ]
+    },
+    {
+      "id": "remote-config",
+      "description": "Remote and origin changes must be confirmed.",
+      "riskLevel": "high",
+      "defaultAction": "confirm",
+      "keywords": [
+        "git remote",
+        "change origin",
+        "set-url",
+        "remote url",
+        "origin"
+      ]
+    },
+    {
+      "id": "privilege-escalation",
+      "description": "Privilege escalation and access control changes are never silent.",
+      "riskLevel": "critical",
+      "defaultAction": "block",
+      "keywords": [
+        "sudo",
+        "root",
+        "admin",
+        "privilege",
+        "permission",
+        "permission escalation",
+        "chmod 777"
+      ]
+    },
+    {
+      "id": "production-impact",
+      "description": "Production-affecting work must be confirmed and staged first.",
+      "riskLevel": "critical",
+      "defaultAction": "confirm",
+      "keywords": [
+        "production",
+        "prod",
+        "live",
+        "deploy",
+        "rollback",
+        "migration",
+        "database",
+        "schema change"
+      ]
+    },
+    {
+      "id": "bulk-overwrite",
+      "description": "Bulk overwrites and mass renames need confirmation.",
+      "riskLevel": "high",
+      "defaultAction": "confirm",
+      "keywords": [
+        "bulk overwrite",
+        "overwrite all",
+        "replace everything",
+        "mass rename",
+        "batch rename",
+        "rewrite all"
+      ]
+    },
+    {
+      "id": "audit-first",
+      "description": "Requests that explicitly ask for audit, inventory, or review should stay audit-first until a plan is approved.",
+      "riskLevel": "medium",
+      "defaultAction": "confirm",
+      "keywords": [
+        "audit",
+        "inventory",
+        "inspect",
+        "review",
+        "scan",
+        "report",
+        "盘点",
+        "审计",
+        "先审计"
+      ]
+    }
+  ]
+}

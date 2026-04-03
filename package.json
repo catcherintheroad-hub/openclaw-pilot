@@ -1,0 +1,37 @@
+{
+  "name": "openclaw-pilot",
+  "version": "0.1.0",
+  "description": "OpenClaw Pilot turns rough ideas into structured, executable AI work instructions for OpenClaw.",
+  "type": "module",
+    "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.3.31"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.5.2",
+    "ajv": "^8.17.1",
+    "openclaw": "2026.3.31",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "openclaw": {
+    "extensions": [
+      "./src/index.ts"
+    ],
+    "install": {
+      "localPath": ".",
+      "defaultChoice": "local",
+      "minHostVersion": ">=2026.3.31"
+    }
+  }
+}

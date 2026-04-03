@@ -1,0 +1,29 @@
+{
+  "defaultMode": "preview",
+  "recentTurns": 8,
+  "maxHistoryMessages": 12,
+  "allowAutoRunUpTo": "low",
+  "standingOrders": [
+    "Preserve the user's scope exactly.",
+    "Prefer audit-first behavior when the request is ambiguous.",
+    "Do not touch backend or production-facing paths unless the user says so.",
+    "Summarize the context used before execution."
+  ],
+  "professionalizer": {
+    "provider": "openai-codex",
+    "model": "gpt-5.4",
+    "thinking": "low",
+    "temperature": 0.2,
+    "maxTokens": 1200,
+    "timeoutMs": 30000,
+    "forceHeuristicFallback": false
+  },
+  "executor": {
+    "strategy": "session-subagent",
+    "waitTimeoutMs": 45000,
+    "deliver": false
+  },
+  "confirmations": {
+    "ttlMs": 3600000
+  }
+}
