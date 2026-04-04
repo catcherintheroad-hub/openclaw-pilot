@@ -112,6 +112,7 @@ function buildPreviewState(params: {
     context_snapshot: params.context.snapshot,
     latest_result: params.result,
     output_language: language,
+    response_strategy: params.result.response_strategy ?? "blueprint-first",
   };
 }
 
@@ -240,6 +241,79 @@ function renderPacketBodyOnly(packet: PilotCommandPacket, language: PilotOutputL
   ].join("\n");
 }
 
+function buildDeliverablePackage(state: PilotState): string {
+  const language = resolveLanguageFromState(state);
+  const requestText = state.latest_result?.original_input || state.project_goal;
+  const lower = requestText.toLowerCase();
+  const deliverables = state.latest_result?.expected_deliverables ?? state.latest_result?.deliverables ?? [];
+  const audience = /开发者|builder|indie hacker|开发/i.test(requestText)
+    ? localize(language, "正在找 AI 工作流、自动化执行和多 Agent 协作抓手的开发者 / builder。", "Developers and builders looking for AI workflow, automation, and multi-agent leverage.")
+    : localize(language, "对 AI 提效、内容增长或工作流自动化感兴趣的早期尝鲜用户。", "Early adopters interested in AI leverage, growth content, or workflow automation.");
+  const angle = /抖音|视频|脚本|口播|短视频|douyin/i.test(lower)
+    ? localize(language, "不要从“这是个 skill”开头，而是从“为什么很多 AI 助手看起来能做事，实际却不会把模糊目标变成可执行任务”切进去。", "Do not open with “this is a skill.” Open with why many AI assistants sound useful but fail to turn fuzzy goals into executable work.")
+    : localize(language, "先把用户卡住的真实问题说透，再自然引出 OpenClaw Pilot 把模糊想法编译成可执行蓝图与干净执行包的能力。", "Start with the real problem users get stuck on, then naturally introduce OpenClaw Pilot as the bridge from rough idea to executable blueprint and clean execution packet.");
+  const script = isChinesePilotOutput(language)
+    ? [
+        "【开场 0-5s】你有没有发现，很多 AI 说得都挺像那么回事，但一到真正执行，就只会给你一堆空话？",
+        "【问题 5-10s】你想做个项目、写个发布稿、推进一个任务，最难的不是想法，而是怎么把模糊目标变成真的能执行的东西。",
+        "【解法 10-20s】我现在在用一个 OpenClaw Pilot，它会先把模糊需求编译成可执行蓝图，再单独吐一个干净的 execution packet，直接交给 OpenClaw 去跑。",
+        "【亮点 20-26s】项目型请求可以持续推进；像脚本、文案、传播方案这种内容型请求，又不会被强行套成空心蓝图壳。",
+        "【收口 26-30s】如果你也想让 AI 少点废话、多点真执行，这种 workflow 值得你试一下。",
+      ].join("\n")
+    : [
+        "[0-5s] Have you noticed how a lot of AI sounds smart right up until you ask it to actually execute?",
+        "[5-10s] The hard part is not having an idea. The hard part is turning a fuzzy goal into something operational.",
+        "[10-20s] That is what OpenClaw Pilot does: it compiles the ask into an executable blueprint, then emits a clean execution packet for OpenClaw.",
+        "[20-26s] Multi-stage projects can keep moving forward, while content requests like scripts and launch copy can ship an actual deliverable first.",
+        "[26-30s] If you want less AI fluff and more real execution, this is the kind of workflow to look at.",
+      ].join("\n");
+  const titles = isChinesePilotOutput(language)
+    ? [
+        "AI 不会执行？你缺的不是模型，是这层编译器",
+        "把模糊想法直接变成可执行任务，我最近在用这个",
+        "为什么很多 AI 助手看起来聪明，做事却总卡住？",
+      ]
+    : [
+        "Your AI is not bad at ideas. It is bad at execution handoff.",
+        "The missing layer between a rough idea and real AI execution",
+        "Why smart AI still gets stuck when work gets real",
+      ];
+  const cover = isChinesePilotOutput(language)
+    ? ["把模糊想法", "变成可执行任务"]
+    : ["Turn rough ideas", "into executable work"];
+  const commentCta = isChinesePilotOutput(language)
+    ? "评论区可引导：如果你想看我把一个真实需求现场编译成 packet，我可以直接录下一条。"
+    : "Comment CTA: if you want, I can record a live example showing a real request being compiled into a packet.";
+  const publishAdvice = isChinesePilotOutput(language)
+    ? [
+        "先发 30 秒问题切入版，不要第一条就讲架构细节。",
+        "标题优先打“AI 会说不会做”这个痛点，再带出 Pilot。",
+        "评论区第一条放“它不是聊天增强，而是把请求编译成执行包”。",
+      ]
+    : [
+        "Lead with the pain point version first, not architecture detail.",
+        "Use the “AI can talk but not execute” pain point as the title hook.",
+        "Pin a comment clarifying that this is not just chat polish; it compiles requests into execution packets.",
+      ];
+
+  return [
+    localize(language, "A. 本轮先交付的成品", "A. Deliverable shipped first"),
+    `${localize(language, "交付策略", "Response strategy")}: ${localize(language, "deliverable-first（先给成品，再给 packet）", "deliverable-first (ship the asset first, then the packet)")}`,
+    `${localize(language, "目标受众", "Target audience")}: ${audience}`,
+    `${localize(language, "核心切入角度", "Core angle")}: ${angle}`,
+    `${localize(language, "本轮成品重点", "Deliverable focus")}: ${renderInline(deliverables, localize(language, "（无）", "(none)"))}`,
+    "",
+    localize(language, "B. 可直接用的内容成品", "B. Ready-to-use content"),
+    localize(language, "30 秒视频脚本：", "30-second script:"),
+    script,
+    "",
+    `${localize(language, "标题建议", "Title ideas")}: ${titles.join(" | ")}`,
+    `${localize(language, "封面建议", "Cover copy")}: ${cover.join(" / ")}`,
+    `${localize(language, "评论区引导", "Comment CTA")}: ${commentCta}`,
+    `${localize(language, "发布建议", "Publish advice")}: ${publishAdvice.join(" ")}`,
+  ].join("\n");
+}
+
 function renderFeedbackContract(contract: PilotFeedbackContract, language: PilotOutputLanguage): string {
   return [
     localize(language, "C. 应回传给 /pilot 的内容", "C. What to send back"),
@@ -272,8 +346,11 @@ export function renderPlanResponse(params: {
 }): string {
   const language = resolveLanguageFromState(params.state);
   traceRenderLocale(params.state, language);
+  const leadSection = params.state.response_strategy === "deliverable-first"
+    ? buildDeliverablePackage(params.state)
+    : renderBlueprint(params.state);
   return [
-    renderBlueprint(params.state),
+    leadSection,
     "",
     renderReadyCommand(params.packet, language),
     "",
@@ -296,8 +373,11 @@ export function renderPlanResponseParts(params: {
   traceRenderLocale(params.state, language);
   const packetSection = renderReadyCommand(params.packet, language);
   const packetText = renderPacketBodyOnly(params.packet, language);
+  const leadSection = params.state.response_strategy === "deliverable-first"
+    ? buildDeliverablePackage(params.state)
+    : renderBlueprint(params.state);
   const summaryLines = [
-    renderBlueprint(params.state),
+    leadSection,
     "",
     localize(
       language,
@@ -326,7 +406,7 @@ export function renderPlanResponseParts(params: {
   return {
     summaryText,
     packetText,
-    combinedText: [renderBlueprint(params.state), "", packetSection, "", renderFeedbackContract(params.feedbackContract, language), "", renderNextCommand(params.state), ...(params.executionText ? ["", params.executionText] : []), "", `${localize(language, "渲染器版本", "Pilot renderer version")}: ${PILOT_RENDERER_VERSION}`, `${localize(language, "构建版本", "Build")}: ${COMMAND_PILOT_BUILD_ID}`].join("\n"),
+    combinedText: [leadSection, "", packetSection, "", renderFeedbackContract(params.feedbackContract, language), "", renderNextCommand(params.state), ...(params.executionText ? ["", params.executionText] : []), "", `${localize(language, "渲染器版本", "Pilot renderer version")}: ${PILOT_RENDERER_VERSION}`, `${localize(language, "构建版本", "Build")}: ${COMMAND_PILOT_BUILD_ID}`].join("\n"),
     messages,
   };
 }

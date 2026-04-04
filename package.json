@@ -1,9 +1,10 @@
 {
-  "name": "openclaw-pilot",
-  "version": "0.1.0",
-  "description": "OpenClaw Pilot turns rough ideas into structured, executable AI work instructions for OpenClaw.",
+  "name": "openclaw-command-pilot-plugin",
+  "version": "0.1.1",
+  "description": "OpenClaw pre-execution orchestration plugin that professionalizes user commands, grades risk, and hands optimized instructions to the agent runtime.",
   "type": "module",
-    "scripts": {
+  "private": true,
+  "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",

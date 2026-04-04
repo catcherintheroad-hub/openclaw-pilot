@@ -65,8 +65,94 @@ function baseProfessionalizerPayload() {
   };
 }
 
+function contentProfessionalizerPayload() {
+  return {
+    original_input: "帮我做一个推荐这个 pilot skill 的视频脚本，看看我应该怎么在抖音上发这个视频能让这个 skill 火起来？",
+    normalized_intent: "为 OpenClaw Pilot 产出抖音传播脚本和发布建议",
+    goal: "产出可直接使用的抖音视频脚本与发布建议",
+    scope: ["视频脚本", "标题", "封面文案", "发布建议"],
+    constraints: ["先直接交付内容成品", "不要空心蓝图"],
+    deliverables: ["视频脚本", "标题建议", "发布建议"],
+    execution_mode: "preview",
+    risk_level: "low",
+    need_confirmation: false,
+    optimized_instruction: "Produce a ready-to-use Douyin script, hooks, and publishing suggestions for OpenClaw Pilot.",
+    context_used_summary: ["recent pilot packaging work", "current workspace intent"],
+    task_objective: "产出可直接使用的抖音视频脚本与发布建议",
+    task_translation: "把 OpenClaw Pilot 包装成适合短视频传播的内容成品。",
+    in_scope: ["脚本", "标题", "封面文案", "评论区引导", "发布建议"],
+    out_of_scope: ["无关宿主集成", "真实发帖执行"],
+    target_files_or_areas: ["content deliverable only"],
+    execution_plan: ["先明确受众和切入角度", "直接交付脚本与发布建议", "如需再给 packet"],
+    validation_checks: ["第 1 条消息先给真实内容成品", "第 2 条如存在则保持 packet-only"],
+    workspace_hygiene: ["不要扩展到无关项目规划"],
+    stop_conditions: ["如果必须进入多阶段项目规划才可继续，就停止并说明"],
+    expected_deliverables: ["目标受众判断", "30 秒脚本", "标题/封面建议", "评论区引导", "发布建议"],
+    executor_prompt: "Produce a ready-to-use short-video marketing package for OpenClaw Pilot.",
+    executor_prompt_preview: "Produce a ready-to-use short-video marketing package for OpenClaw Pilot.",
+    schema_validation_ok: true,
+  };
+}
+
 describe("pilot orchestrator", () => {
-  it("compiles plan_only requests without storing approvals or executing handoff", async () => {
+  it("routes content-style requests to deliverable-first so message 1 ships a real asset", async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "command-pilot-content-"));
+    const runEmbeddedPiAgent = vi.fn(async (): Promise<EmbeddedRunResult> => ({
+      payloads: [
+        {
+          text: JSON.stringify(contentProfessionalizerPayload()),
+        },
+      ],
+      meta: { durationMs: 1 },
+    }));
+    const api = createApi(runEmbeddedPiAgent);
+    const services = {
+      cache: new ConversationCache(path.join(tempDir, "context-cache.json"), 50),
+      approvals: new PendingApprovalsStore(path.join(tempDir, "pending-approvals.json")),
+      states: new PilotStateStore(path.join(tempDir, "pilot-states.json")),
+    };
+    const ctx = {
+      args: "帮我做一个推荐这个 pilot skill 的视频脚本，看看我应该怎么在抖音上发这个视频能让这个 skill 火起来？",
+      channel: "webchat",
+      from: "webchat:user-1",
+      to: "webchat:session-1",
+      senderId: "user-1",
+      accountId: "default",
+    } as unknown as PluginCommandContext;
+
+    const response = await handlePilotCommand({
+      api,
+      ctx,
+      pluginConfig: { workspacePath: tempDir },
+      services,
+    });
+
+    expect(Array.isArray((response as { messages?: unknown[] }).messages)).toBe(true);
+    expect((response as { messages?: Array<{ text: string }> }).messages).toHaveLength(2);
+    const responseMessages = (response as unknown as { messages: Array<{ text: string }> }).messages;
+    expect(responseMessages[0].text).toContain("A. 本轮先交付的成品");
+    expect(responseMessages[0].text).toContain("目标受众");
+    expect(responseMessages[0].text).toContain("30 秒视频脚本");
+    expect(responseMessages[0].text).toContain("标题建议");
+    expect(responseMessages[0].text).toContain("发布建议");
+    expect(responseMessages[0].text).not.toContain("A. Command Pilot 蓝图");
+    expect(responseMessages[0].text).not.toContain("为什么现在做这一阶段");
+    expect(responseMessages[0].text).not.toContain("当前阶段");
+    expect(responseMessages[0].text).not.toContain("[OPENCLAW_EXECUTION_PACKET v1]");
+    expect(responseMessages[1].text.startsWith("[OPENCLAW_EXECUTION_PACKET v1]\n")).toBe(true);
+    expect(responseMessages[1].text.trim().endsWith("[END_OPENCLAW_EXECUTION_PACKET]")).toBe(true);
+    expect(responseMessages[1].text).not.toContain("30 秒视频脚本");
+    expect(responseMessages[1].text).toContain("阶段：");
+    expect(responseMessages[1].text).toContain("成品交付阶段");
+    expect(responseMessages[1].text).not.toContain("阶段：\n蓝图阶段");
+    expect(responseMessages[1].text).not.toContain("默认规划模式应先编译出安全、可直接发送的阶段命令包");
+    expect(responseMessages[1].text).not.toContain("- 蓝图");
+    expect(responseMessages[1].text).toContain("- 目标受众判断");
+    expect(responseMessages[1].text).toContain("- 标题/封面建议");
+    expect(responseMessages[1].text).toContain("- 发布建议");
+  });
+
+  it("keeps the new /pilot reply contract split into exactly two messages for blueprint-first requests", async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "command-pilot-test-"));
     const runEmbeddedPiAgent = vi.fn(async (): Promise<EmbeddedRunResult> => ({
       payloads: [
@@ -123,10 +209,67 @@ describe("pilot orchestrator", () => {
     expect(responseMessages[0].text).toContain("A. Command Pilot 蓝图");
     expect(responseMessages[0].text).toContain("可直接发送给 OpenClaw 的命令已在下一条消息单独发送");
     expect(responseMessages[0].text).not.toContain("[OPENCLAW_EXECUTION_PACKET v1]");
-    expect(responseMessages[1].text).toContain("[OPENCLAW_EXECUTION_PACKET v1]");
+    expect(responseMessages[1].text.startsWith("[OPENCLAW_EXECUTION_PACKET v1]\n")).toBe(true);
+    expect(responseMessages[1].text.trim().endsWith("[END_OPENCLAW_EXECUTION_PACKET]")).toBe(true);
     expect(responseMessages[1].text).not.toContain("A. Command Pilot 蓝图");
+    expect(responseMessages[1].text).not.toContain("B. 可直接发送给 OpenClaw 的命令");
     expect(responseMessages[1].text).not.toContain("C. 应回传给 /pilot 的内容");
     expect(responseMessages[1].text).not.toContain("D. 下一条命令");
+    expect(responseMessages[1].text).not.toContain("可直接发送给 OpenClaw 的命令已在下一条消息单独发送");
+  });
+
+  it("keeps project-style requests on blueprint-first routing", async () => {
+    const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "command-pilot-project-"));
+    const payload = {
+      ...baseProfessionalizerPayload(),
+      original_input: "做一个 AI 单证核对 MVP",
+      normalized_intent: "做一个 AI 单证核对 MVP",
+      goal: "做一个 AI 单证核对 MVP",
+      project_goal: "做一个 AI 单证核对 MVP",
+      core_thesis: "先定义 MVP 的最小闭环，再推进实现阶段",
+      task_objective: "做一个 AI 单证核对 MVP",
+      task_translation: "先输出 MVP 的蓝图与第一阶段执行包",
+      current_stage_name: "蓝图阶段",
+      current_stage_objective: "定义 MVP 范围和第一阶段",
+      why_this_stage_now: "这是一个多阶段项目，先做蓝图和范围收敛。",
+      expected_deliverables: ["MVP 蓝图", "第一阶段执行包", "反馈契约"],
+    };
+    const runEmbeddedPiAgent = vi.fn(async (): Promise<EmbeddedRunResult> => ({
+      payloads: [{ text: JSON.stringify(payload) }],
+      meta: { durationMs: 1 },
+    }));
+    const api = createApi(runEmbeddedPiAgent);
+    const services = {
+      cache: new ConversationCache(path.join(tempDir, "context-cache.json"), 50),
+      approvals: new PendingApprovalsStore(path.join(tempDir, "pending-approvals.json")),
+      states: new PilotStateStore(path.join(tempDir, "pilot-states.json")),
+    };
+
+    const response = await handlePilotCommand({
+      api,
+      ctx: {
+        args: "做一个 AI 单证核对 MVP",
+        channel: "webchat",
+        from: "webchat:user-1",
+        to: "webchat:session-1",
+        senderId: "user-1",
+        accountId: "default",
+      } as unknown as PluginCommandContext,
+      pluginConfig: { workspacePath: tempDir },
+      services,
+    });
+
+    const responseMessages = (response as unknown as { messages: Array<{ text: string }> }).messages;
+    expect(responseMessages).toHaveLength(2);
+    expect(responseMessages[0].text).toContain("A. Command Pilot 蓝图");
+    expect(responseMessages[0].text).toContain("蓝图 ID");
+    expect(responseMessages[0].text).toContain("当前阶段");
+    expect(responseMessages[0].text).not.toContain("30 秒视频脚本");
+    expect(responseMessages[1].text.startsWith("[OPENCLAW_EXECUTION_PACKET v1]\n")).toBe(true);
+    expect(responseMessages[1].text).toContain("蓝图阶段");
+    expect(responseMessages[1].text).toContain("默认规划模式应先编译出安全、可直接发送的阶段命令包");
+    expect(responseMessages[1].text).toContain("- 蓝图");
+    expect(responseMessages[1].text).not.toContain("成品交付阶段");
   });
 
   it("keeps dirty target overlap gated behind auto_run", async () => {
@@ -215,7 +358,7 @@ describe("pilot orchestrator", () => {
     expect(await services.approvals.list()).toHaveLength(0);
   });
 
-  it("supports status and next on persisted pilot state", async () => {
+  it("keeps the /pilot next reply contract aligned with the new-task path", async () => {
     const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "command-pilot-status-"));
     const runEmbeddedPiAgent = vi.fn(async (): Promise<EmbeddedRunResult> => ({
       payloads: [{ text: JSON.stringify(baseProfessionalizerPayload()) }],
@@ -267,7 +410,14 @@ describe("pilot orchestrator", () => {
     expect(nextMessages[0].text).toContain("A. Command Pilot 蓝图");
     expect(nextMessages[0].text).toContain("可直接发送给 OpenClaw 的命令已在下一条消息单独发送");
     expect(nextMessages[0].text).not.toContain("[OPENCLAW_EXECUTION_PACKET v1]");
-    expect(nextMessages[1].text).toContain("[OPENCLAW_EXECUTION_PACKET v1]");
+    expect(nextMessages[1].text.startsWith("[OPENCLAW_EXECUTION_PACKET v1]\n")).toBe(true);
+    expect(nextMessages[1].text.trim().endsWith("[END_OPENCLAW_EXECUTION_PACKET]" )).toBe(true);
+    expect(nextMessages[1].text).toContain("Next stage");
     expect(nextMessages[1].text).not.toContain("A. Command Pilot 蓝图");
+    expect(nextMessages[1].text).not.toContain("B. 可直接发送给 OpenClaw 的命令");
+    expect(nextMessages[1].text).not.toContain("C. 应回传给 /pilot 的内容");
+    expect(nextMessages[1].text).not.toContain("D. 下一条命令");
+    expect(nextMessages[1].text).not.toContain("可直接发送给 OpenClaw 的命令已在下一条消息单独发送");
+
   });
 });

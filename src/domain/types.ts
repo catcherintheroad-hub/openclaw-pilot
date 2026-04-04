@@ -4,6 +4,7 @@ export type ExecutionMode = "draft" | "preview" | "run";
 
 export type PilotRunMode = "plan_only" | "auto_run";
 export type PilotOutputLanguage = "zh-CN" | "en";
+export type PilotResponseStrategy = "blueprint-first" | "deliverable-first";
 
 export type PilotCommandAction = "process" | "next" | "status" | "discard" | "confirm" | "continue";
 
@@ -68,6 +69,7 @@ export type ProfessionalizationResult = {
   suggested_plan?: string[];
   risk_reasons?: string[];
   output_language?: PilotOutputLanguage;
+  response_strategy?: PilotResponseStrategy;
 };
 
 export type EffectiveRiskDecision = {
@@ -185,6 +187,7 @@ export type PilotState = {
   context_snapshot?: PilotContextSnapshot;
   latest_result?: ProfessionalizationResult;
   output_language: PilotOutputLanguage;
+  response_strategy: PilotResponseStrategy;
 };
 
 export type StandingOrderExcerpt = {

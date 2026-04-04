@@ -1,125 +1,124 @@
-# OpenClaw Pilot
+# openclaw-command-pilot-plugin
 
-**OpenClaw Pilot — 把模糊想法编译成可执行的 AI 工作指令。**
+`openclaw-command-pilot-plugin` compiles rough ideas into an executable blueprint and a clean OpenClaw execution packet.
 
-OpenClaw Pilot 是一个面向 OpenClaw 的源码优先插件。它把用户的模糊目标编译成两段式交付：
+> Current packaging direction: ship the behavior contract first via a public `OpenClaw Pilot` skill shell, then add heavier plugin/distribution layers only where they add real value.
 
-1. 给人看的规划蓝图
-2. 可直接发送给 OpenClaw 的执行指令包
+Validated against OpenClaw `2026.3.31`.
 
-这让 `/pilot` 更像一个“任务编译器”，而不是单纯的提示词润色器。
+## Import hygiene
 
-## 这是什么
+This project has been checked for deprecated root imports. There are no `openclaw/plugin-sdk` root imports; all SDK imports use the supported subpath form:
 
-很多任务失败，不是模型不行，而是输入太模糊、范围太散、阶段不清。
+- `openclaw/plugin-sdk/core`
 
-OpenClaw Pilot 的作用，是把模糊输入编译成：
+## What it uses
 
-- 收敛后的阶段目标
-- 明确的范围内 / 范围外
-- 可继续推进的 `pilot_id`
-- 一份机器可执行的执行包
+- `api.registerCommand(...)` for `/pilot`
+- `api.on("before_prompt_build", ...)` for standing-order injection
+- `api.runtime.subagent.getSessionMessages(...)` for recent session context
+- `api.runtime.subagent.run(...)` and `waitForRun(...)` for execution handoff
+- `api.runtime.agent.runEmbeddedPiAgent(...)` for structured professionalization
 
-## 核心能力
+## Approval semantics
 
-- **`/pilot`：新任务编译**
-- **`/pilot next <pilot_id>`：同项目续跑**
-- **两条消息交付**
-- **中文默认输出支持**
-- **风险分级与执行前收敛**
-- **structured professionalizer 稳定性增强**
+There are two approval layers:
 
-## `/pilot` 和 `/pilot next` 是干什么的
+- Command Pilot preflight approval: `/pilot confirm <id>` or `/pilot cancel <id>`
+- Official OpenClaw exec approval after handoff: `/approve <id> allow-once|allow-always|deny`
 
-### `/pilot`
-用于开始一个新方向，输出阶段蓝图与执行包。
+Current OpenClaw `2026.3.31` exposes official `/approve` for exec approvals through `approvals.exec`. It does not expose a generic plugin-level `approvals.plugin` surface for arbitrary native plugin command gates. This plugin therefore keeps a narrow preflight approval for its own risk gate, while remaining compatible with official `/approve` if downstream execution triggers exec approval.
 
-### `/pilot next <pilot_id>`
-用于在同一个项目上继续推进下一阶段，不重新开题。
+## Minimal runnable config
 
-## 两条消息交付是什么
-
-### 第一条
-给人看，负责说明当前阶段、范围、约束和下一步。
-
-### 第二条
-给 OpenClaw 执行，使用：
-
-- `[OPENCLAW_EXECUTION_PACKET v1]`
-- `...`
-- `[END_OPENCLAW_EXECUTION_PACKET]`
-
-## 仓库现状
-
-本仓库已经包含**真实可运行源码**、配置、测试与最小文档，不再只是 README 骨架。
-
-当前公开版重点包括：
-
-- `/pilot` 新任务编译流程
-- `/pilot next` 续跑流程
-- 两条消息交付
-- 中文默认输出支持
-- 风险分级与执行前收敛
-- professionalizer 恢复与降级路径
-
-## 仓库结构
-
-```text
-openclaw-pilot/
-├─ src/
-├─ test/
-├─ tests/
-├─ config/
-├─ docs/
-├─ examples/
-├─ scripts/
-├─ package.json
-├─ tsconfig.json
-├─ vitest.config.ts
-└─ openclaw.plugin.json
+```json5
+{
+  plugins: {
+    entries: {
+      "command-pilot": {
+        enabled: true,
+        hooks: {
+          allowPromptInjection: true
+        },
+        config: {
+          defaultMode: "preview",
+          recentTurns: 8,
+          maxHistoryMessages: 12,
+          allowAutoRunUpTo: "low"
+        }
+      }
+    }
+  },
+  approvals: {
+    exec: {
+      enabled: true,
+      mode: "session"
+    }
+  }
+}
 ```
 
-## 安装
+Notes:
 
-### 开发环境
+- `plugins.entries.command-pilot.enabled` is required.
+- `plugins.entries.command-pilot.hooks.allowPromptInjection` is recommended. If `false`, `/pilot` still works, but standing-order injection via `before_prompt_build` is skipped.
+- `approvals.exec` is the real current OpenClaw approval-forwarding config. `approvals.plugin` is not a current host key in `2026.3.31`.
+
+## Install
 
 ```bash
+cd /Users/jiahuiwu/Desktop/指令优化/openclaw-command-pilot-plugin
 pnpm install
-pnpm typecheck
 pnpm test
-```
-
-### 本地插件安装
-
-```bash
-openclaw plugins install -l .
+pnpm build
+openclaw plugins install -l /Users/jiahuiwu/Desktop/指令优化/openclaw-command-pilot-plugin
 openclaw gateway restart
 ```
 
-## 基本安装/开发命令
+## Dry-run commands
 
-```bash
-pnpm install
-pnpm typecheck
-pnpm test
-pnpm build
+- WebUI Chat:
+  `/pilot 把 OCAX 首页和 roles 页统一成 linear 风格，先审计再改，不要动后端`
+- Telegram:
+  `/pilot 把 OCAX 首页和 roles 页统一成 linear 风格，先审计再改，不要动后端`
+
+Expected:
+
+- command triggers successfully
+- recent session context is reflected in the brief when available
+- low-risk requests show a preview and can hand off
+- higher-risk requests stop at the preflight approval gate
+- if downstream OpenClaw exec approval is triggered, official `/approve` remains the resolver
+
+## Quick start
+
+> Note: the public `OpenClaw Pilot` skill shell is the recommended first release artifact. The native plugin in this repo is the implementation base, not a claim that ClawHub users will automatically get the full plugin install/runtime flow from the skill alone.
+
+
+### Shortest demo
+
+```text
+/pilot Build a lightweight OpenClaw workflow that turns vague ideas into execution-ready packets, but keep the first release minimal and scope-controlled.
 ```
 
-## 测试命令
+Expected reply shape:
 
-```bash
-pnpm typecheck
-pnpm test
-```
+1. a first message with real user value
+   - project-style requests: a human-readable blueprint
+   - content/marketing/script-style requests: a ready-to-use deliverable first
+2. a separate pure `[OPENCLAW_EXECUTION_PACKET v1] ... [END_OPENCLAW_EXECUTION_PACKET]` message
 
-## 文档
+That two-message behavior is the main publishable contract for the public beta skill shell.
 
-- [架构说明](docs/ARCHITECTURE.md)
-- [发布清单](docs/LAUNCH_CHECKLIST.md)
-- [产品定位](docs/PRODUCT_POSITIONING.md)
-- [配置说明](docs/configuration.md)
-- [安装说明](docs/installation.md)
+### Before / after
 
-## 许可证
+- **Before:** rough idea mixed with assumptions and hidden scope drift, or content requests getting forced into empty blueprint shells
+- **After:** either a scoped blueprint or a ready-to-use content deliverable first, plus a packet-only handoff message and `/pilot next <pilot_id> ...` continuation path
 
-MIT，见 [LICENSE](LICENSE)。
+## Docs
+
+- [Installation](./docs/installation.md)
+- [Architecture](./docs/architecture.md)
+- [Configuration](./docs/configuration.md)
+- [Channels](./docs/channels.md)
+- [Handoff](./docs/handoff.md)

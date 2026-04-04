@@ -16,6 +16,7 @@ import type {
   PilotFeedbackContract,
   PilotFeedbackEntry,
   PilotRequest,
+  PilotResponseStrategy,
   PilotRunMode,
   PilotState,
   ProfessionalizationResult,
@@ -472,6 +473,7 @@ async function advancePilot(
     }),
     updated_at: Date.now(),
     status: "active",
+    response_strategy: "blueprint-first",
   };
   const packet = stateToPacket(updated);
   const feedbackContract = buildFeedbackContract(updated);
@@ -545,6 +547,43 @@ function resolveRequestedRunMode(request: PilotRequest): PilotRunMode {
   return request.runMode ?? (request.mode === "run" ? "auto_run" : "plan_only");
 }
 
+function resolveResponseStrategy(request: PilotRequest, result: ProfessionalizationResult): PilotResponseStrategy {
+  if (request.action === "next" || request.action === "status" || request.action === "confirm" || request.action === "continue") {
+    return "blueprint-first";
+  }
+
+  const userText = request.rawInput.trim();
+  const requestHaystack = userText.toLowerCase();
+  const resultHaystack = [
+    result.original_input,
+    result.normalized_intent,
+    result.goal,
+    result.task_translation,
+    ...(result.deliverables ?? []),
+    ...(result.expected_deliverables ?? []),
+  ].filter(Boolean).join("\n").toLowerCase();
+
+  const strongContentSignals = [
+    /视频脚本|脚本|口播|分镜|短视频|抖音|小红书|b站|youtube script|video script/i,
+    /文案|发布帖|宣传语|slogan|tagline|标题|封面文案|headline|copywriting|copy/i,
+    /landing page|landingpage|landing-page|hero section|README 首屏|readme hero|发布说明|release notes/i,
+    /营销|传播|增长|投放|社媒|social post|social copy|launch post|campaign/i,
+  ];
+  const explicitProjectSignals = [
+    /mvp|实施计划|路线图|roadmap|architecture|架构|规划|phase|阶段|推进到|字段模型|规则设计/i,
+    /workflow|多阶段|project|项目|系统|implementation|implement/i,
+  ];
+
+  const strongContentScore = strongContentSignals.reduce((sum, pattern) => sum + (pattern.test(requestHaystack) ? 2 : 0), 0);
+  const resultContentScore = strongContentSignals.reduce((sum, pattern) => sum + (pattern.test(resultHaystack) ? 1 : 0), 0);
+  const projectScore = explicitProjectSignals.reduce((sum, pattern) => sum + (pattern.test(requestHaystack) ? 1 : 0), 0);
+
+  if (strongContentScore > 0 && strongContentScore + resultContentScore >= projectScore + 1) {
+    return "deliverable-first";
+  }
+  return "blueprint-first";
+}
+
 function toProfessionalizerMode(requestedRunMode: PilotRunMode): "draft" | "preview" | "run" {
   return requestedRunMode === "auto_run" ? "run" : "preview";
 }
@@ -559,7 +598,8 @@ function buildPilotState(params: {
   snapshot: PilotContextSnapshot | undefined;
 }): PilotState {
   const pilotId = params.request.pilotId ?? createPilotId(params.request, params.startedAt);
-  const stage = buildBlueprintStage(params.result, params.risk, params.runMode);
+  const responseStrategy = resolveResponseStrategy(params.request, params.result);
+  const stage = buildBlueprintStage(params.result, params.risk, params.runMode, responseStrategy);
   const blueprint: PilotBlueprint = {
     pilot_id: pilotId,
     project_goal: params.result.goal,
@@ -589,6 +629,7 @@ function buildPilotState(params: {
     context_snapshot: params.snapshot,
     latest_result: params.result,
     output_language: params.result.output_language ?? detectPilotOutputLanguage(params.request.feedback || params.request.rawInput),
+    response_strategy: responseStrategy,
   };
   const packet = stateToPacket(state);
   const feedbackContract = buildFeedbackContract(state);
@@ -608,18 +649,25 @@ function buildBlueprintStage(
   result: ProfessionalizationResult,
   risk: EffectiveRiskDecision,
   runMode: PilotRunMode,
+  responseStrategy: PilotResponseStrategy,
 ): PilotBlueprintStage {
   const language = result.output_language ?? detectPilotOutputLanguage(result.original_input);
   return {
     stage_id: `stage-${shortHash(`${result.original_input}:${runMode}:${result.goal}`)}`,
     stage_name: runMode === "auto_run"
       ? (isChinesePilotOutput(language) ? "自动执行阶段" : "Auto-run stage")
-      : (isChinesePilotOutput(language) ? "蓝图阶段" : "Blueprint stage"),
-    stage_objective: result.task_translation || result.goal,
+      : responseStrategy === "deliverable-first"
+        ? (isChinesePilotOutput(language) ? "成品交付阶段" : "Deliverable stage")
+        : (isChinesePilotOutput(language) ? "蓝图阶段" : "Blueprint stage"),
+    stage_objective: responseStrategy === "deliverable-first"
+      ? (isChinesePilotOutput(language) ? "直接产出用户可用的内容成品，并保留可继续执行的 packet。" : "Directly ship a user-ready content deliverable while preserving an executable packet.")
+      : (result.task_translation || result.goal),
     why_this_stage_now:
       runMode === "auto_run"
         ? (isChinesePilotOutput(language) ? "用户明确要求本阶段走自动执行模式。" : "The user explicitly requested auto-run for the current stage.")
-        : (isChinesePilotOutput(language) ? "默认规划模式应先编译出安全、可直接发送的阶段命令包。" : "Default plan-only mode should compile a safe, ready-to-send stage packet."),
+        : responseStrategy === "deliverable-first"
+          ? (isChinesePilotOutput(language) ? "当前请求属于低风险内容交付，应先把用户真正可用的成品交出来，再附上可选执行包。" : "This request is a low-risk content deliverable, so the first response should ship a user-ready asset before any optional execution packet.")
+          : (isChinesePilotOutput(language) ? "默认规划模式应先编译出安全、可直接发送的阶段命令包。" : "Default plan-only mode should compile a safe, ready-to-send stage packet."),
     in_scope_now: result.in_scope.length > 0 ? result.in_scope : result.scope,
     out_of_scope_now: result.out_of_scope.length > 0 ? result.out_of_scope : [isChinesePilotOutput(language) ? "无关工作" : "unrelated work"],
     success_criteria: result.validation_checks.length > 0 ? result.validation_checks : [isChinesePilotOutput(language) ? "当前阶段目标已经可交给 OpenClaw 执行。" : "The stage objective is ready to hand to OpenClaw."],
@@ -651,6 +699,7 @@ function buildFeedbackContract(state: PilotState): PilotFeedbackContract {
 function stateToPacket(state: PilotState): PilotCommandPacket {
   const stage = state.project_blueprint.current_stage;
   const chinese = isChinesePilotOutput(state.output_language);
+  const deliverableFirst = state.response_strategy === "deliverable-first";
   return {
     packet_version: "v1",
     pilot_id: state.pilot_id,
@@ -662,28 +711,59 @@ function stateToPacket(state: PilotState): PilotCommandPacket {
     in_scope: stage.in_scope_now,
     out_of_scope: stage.out_of_scope_now,
     constraints: stage.constraints,
-    execution_plan: [
-      chinese
-        ? "先审计当前请求对应的表面和上下文。"
-        : "Audit the current state for the requested surface.",
-      chinese
-        ? "编译出最小、可执行且不会范围漂移的阶段命令包。"
-        : "Compile the smallest stage packet that OpenClaw can execute without scope drift.",
-      chinese
-        ? "如果下一步需要更多上下文或更高风险路径，就停止并说明。"
-        : "Stop and report if the next step needs more context or a higher-risk path.",
-    ],
-    deliverables: chinese ? ["蓝图", "可直接发送给 OpenClaw 的命令", "反馈契约"] : ["Blueprint", "Ready-to-send OpenClaw command", "Feedback contract"],
+    execution_plan: deliverableFirst
+      ? [
+          chinese
+            ? "先直接产出用户可用的内容成品，而不是先回一个空心蓝图壳。"
+            : "Ship a user-ready content deliverable first instead of returning an empty blueprint shell.",
+          chinese
+            ? "把成品组织成可直接使用的脚本、标题、封面建议、评论区引导或发布建议。"
+            : "Organize the deliverable into directly usable script, title, cover-copy, comment CTA, or publishing guidance.",
+          chinese
+            ? "仅在保留当前范围和低风险前提下，再附上可继续执行的 packet；如果必须扩展成多阶段项目，再停止并说明。"
+            : "Only then attach a continuation-ready packet within the same low-risk scope; stop and explain if it must expand into a multi-stage project.",
+        ]
+      : [
+          chinese
+            ? "先审计当前请求对应的表面和上下文。"
+            : "Audit the current state for the requested surface.",
+          chinese
+            ? "编译出最小、可执行且不会范围漂移的阶段命令包。"
+            : "Compile the smallest stage packet that OpenClaw can execute without scope drift.",
+          chinese
+            ? "如果下一步需要更多上下文或更高风险路径，就停止并说明。"
+            : "Stop and report if the next step needs more context or a higher-risk path.",
+        ],
+    deliverables: deliverableFirst
+      ? (state.latest_result?.expected_deliverables?.length
+          ? state.latest_result.expected_deliverables
+          : (chinese
+              ? ["内容成品", "标题建议", "封面建议", "评论区引导", "发布建议", "packet"]
+              : ["content deliverable", "title ideas", "cover copy", "comment CTA", "publishing guidance", "packet"]))
+      : (chinese ? ["蓝图", "可直接发送给 OpenClaw 的命令", "反馈契约"] : ["Blueprint", "Ready-to-send OpenClaw command", "Feedback contract"]),
     validation: stage.success_criteria,
-    stop_conditions: [
-      chinese
-        ? "如果本阶段需要比用户当前授权更高风险的运行模式，就停止。"
-        : "Stop if the stage requires a higher-risk run mode than the user provided.",
-      chinese
-        ? "如果命令会扩展到已声明范围之外，就停止。"
-        : "Stop if the command would expand outside the stated scope.",
-    ],
-    do_not: chinese ? ["不要改写项目目标。", "没有反馈前不要进入下一阶段。"] : ["Do not change the project goal.", "Do not advance to the next stage without feedback."],
+    stop_conditions: deliverableFirst
+      ? [
+          chinese
+            ? "如果当前请求实际需要持续阶段追踪或更高风险执行，就停止并改走项目型路径。"
+            : "Stop if the request actually needs staged tracking or higher-risk execution and should move back to the project path.",
+          chinese
+            ? "如果成品输出会扩展到用户未要求的品牌/渠道/平台范围，就停止。"
+            : "Stop if the deliverable would expand into unrequested brand, channel, or platform scope.",
+        ]
+      : [
+          chinese
+            ? "如果本阶段需要比用户当前授权更高风险的运行模式，就停止。"
+            : "Stop if the stage requires a higher-risk run mode than the user provided.",
+          chinese
+            ? "如果命令会扩展到已声明范围之外，就停止。"
+            : "Stop if the command would expand outside the stated scope.",
+        ],
+    do_not: deliverableFirst
+      ? (chinese
+          ? ["不要把第 1 条消息退化成蓝图模板。", "不要在没有必要时擅自扩展成多阶段项目。"]
+          : ["Do not collapse message 1 back into a blueprint template.", "Do not expand into a multi-stage project unless necessary."])
+      : (chinese ? ["不要改写项目目标。", "没有反馈前不要进入下一阶段。"] : ["Do not change the project goal.", "Do not advance to the next stage without feedback."]),
     return_format: [
       ...(chinese
         ? [
